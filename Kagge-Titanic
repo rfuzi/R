@@ -1,3 +1,16 @@
+#################################################################
+#
+#           Machine Learning Kaggle
+#
+# Autor: Roberto Haruo Lopes Fuzimoto
+# Projeto: Neste desafio, pedimos que você complete a análise de que
+# tipos de pessoas provavelmente sobrevivem. Em particular, pedimos 
+# que você aplique as ferramentas de aprendizado de máquina para prever 
+# quais passageiros sobreviveram à tragédia.
+#
+#
+#################################################################
+
 # Carregando os arquivos de Treino e Teste.
 data_train <- read.csv("../input/train.csv")
 data_test<- read.csv("../input/train.csv")
