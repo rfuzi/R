@@ -11,304 +11,179 @@
 #
 #################################################################
 
-getwd()
-setwd("/home/rfuzi/Documentos/Projetos/Kaggle/Titanic")
 
-install.packages("funModeling")
-install.packages("Amelia", lib = "~/myrlibrary")
-install.packages("caret")
-install.packages("ggplot2")
-install.packages("dplyr")
-install.packages("reshape")
-install.packages("randomForest")
-install.packages("readxl")
-install.packages("e1071") # Naive Bayes
-install.packages("tidyr")
-install.packages("ggthemes")
-install.packages("rpart")
-
-# Carregando os pacotes
-library(Amelia)
-library(caret)
 library(ggplot2) # Gráficos
 library(dplyr) # data manipulation
-library(reshape)
 library(randomForest)
-library(readxl)
-library(e1071) # Naive Bayes
-library(funModeling)
-library(tidyr) # data manipulation
 library(ggthemes)
-library(rpart) #Classification and Regression Trees (CART)
-library(rpart.plot) #Classification and Regression Trees (CART)
 
-rfNews()
+# Carregando os arquivos de Treino e Teste.
+data_train <- read.csv("../input/train.csv")
+data_test<- read.csv("../input/train.csv")
+head(data_train)
+colnames(data_train)
 
-# carregando o arquivo
-dataset <- read.csv("train.csv", sep=",")
-dataset <- data.frame(dataset)
-head(dataset)
-#View(dataset)
-
-
-# Resumo do dataset
-str(dataset)
-colnames(dataset)
-
-# Removendo colunas 
-dataset$PassengerId <- NULL
-dataset$SibSp <- NULL
-dataset$Parch <- NULL
-dataset$Ticket <- NULL
-dataset$Cabin <- NULL
-dataset$Name <- NULL
-
-colnames(dataset)
-# RENOMEANDO AS COLUNAS
-colnames(dataset)[1] <- "SOBREVIVEU"
-colnames(dataset)[2] <- "CLASSE_SOCIAL"
-colnames(dataset)[3] <- "SEXO"
-colnames(dataset)[4] <- "IDADE"
-colnames(dataset)[5] <- "PREÇO"
-colnames(dataset)[6] <- "PORTO_DE_EMBARCAÇÃO"
+# Removendo colunas.
+data_train$PassengerId <- NULL
+data_train$SibSp <- NULL
+data_train$Parch <- NULL
+data_train$Ticket <- NULL
+data_train$Cabin <- NULL
+data_train$Name <- NULL
 
 # Ordenando as colunas
-dataset <- dataset %>%
-  select(CLASSE_SOCIAL, IDADE, SEXO, PREÇO, PORTO_DE_EMBARCAÇÃO, SOBREVIVEU)
+data_train <- data_train %>%
+select(Pclass, Age, Sex, Fare, Embarked, Survived)
 
+# Transformando as variáveis em facto.
+data_train$Survived <- as.factor(data_train$Survived)
+levels(data_train$Survived) <- c("Não", "Sim")
 
+data_train$Sex <- as.factor(data_train$Sex)
+levels(data_train$Sex) <- c("Feminino", "Masculino")
 
-# Transoformando as Variáveis em fator, numerico e character
+data_train$Pclass <- as.factor(data_train$Pclass)
+levels(data_train$Pclass) <- c("Alta", "Média", "Baixa")
 
-#dataset$NOME <- as.character(dataset$NOME)
+data_train$Age <- as.numeric(data_train$Age)
+data_train$Age <- cut(data_train$Age, c(0, 30, 50, 100), labels = c("Jovem", "adulto", "Idoso"))
 
-
-dataset$SOBREVIVEU <- as.factor(dataset$SOBREVIVEU)
-levels(dataset$SOBREVIVEU) <- c("Não", "Sim")
-head(dataset$SOBREVIVEU)
-
-dataset$SEXO <- as.factor(dataset$SEXO)
-levels(dataset$SEXO) <- c("Feminino", "Masculino")
-
-dataset$CLASSE_SOCIAL <- as.factor(dataset$CLASSE_SOCIAL)
-levels(dataset$CLASSE_SOCIAL)
-levels(dataset$CLASSE_SOCIAL) <- c("Alta", "Média", "Baixa")
-
-dataset$IDADE <- as.numeric(dataset$IDADE)
-dataset$IDADE <- cut(dataset$IDADE, c(0, 30, 50, 100), labels = c("Jovem", "adulto", "Idoso"))
-
-dataset$PORTO_DE_EMBARCAÇÃO <- as.factor(dataset$PORTO_DE_EMBARCAÇÃO)
-levels(dataset$PORTO_DE_EMBARCAÇÃO) <- c(0,"Cherbourg","Southampton", "Queenstown")
+data_train$Embarked <- as.factor(data_train$Embarked)
+levels(data_train$Embarked) <- c(0,"Cherbourg","Southampton", "Queenstown")
 
 #########################################################################
 #Eclat Algotitmo utilizado para encontrar padrões nos data sets #########
 #########################################################################
-installed.packages("arules")
 library(arules)
+library(arulesViz)
 
-dataset$PREÇO <- as.factor(dataset$PREÇO)
-regras <- eclat(dataset, parameter = list(supp = 0.1, maxlen = 5))
+data_train$Fare <- as.factor(data_train$Fare)
+regras <- eclat(data_train, parameter = list(supp = 0.1, maxlen = 5))
 inspect(regras)
-install.packages("aruleViz")
+#install.packages("aruleViz")
 plot(regras, method="graph", control=list(type="items"))
 
 # Verificando se a valores missing
-sapply(dataset, function(x) sum(is.na(x)))
-missmap(dataset, main = "Valores Missing Observados")
-dataset <- na.omit(dataset)
+sapply(data_train, function(x) sum(is.na(x)))
+#missmap(data_train, main = "Valores Missing Observados")
+data_train <- na.omit(data_train)
+head(data_train)
+     
+# Esses 3 gráficos nos mostram que pessoas mais velhas, de classe social alta e do sexo 
+# feminino pagarama mais caro nas cabines do navio.
 
-# Verifcar valores missing
-dataset <- na.omit(dataset)
-
-#Medidas de posição
-str(dataset)
-mean(dataset$PREÇO)
-median(dataset$PREÇO)
-
-dataset$PREÇO <- as.numeric(dataset$PREÇO)
+data_train$Fare <- as.numeric(data_train$Fare)
 # Gráfico média de preço da passagem por Idade
-ggplot(dataset) + stat_summary(aes(x = dataset$IDADE, y = dataset$PREÇO),
+ggplot(data_train) + stat_summary(aes(x = data_train$Age, y = data_train$Fare),
                                fun.y = mean, geom = "bar",
                                fill = "lightgreen", col = "grey50")
-
 #Gráfico média de preço da passagem por CLasse Social
-ggplot(dataset) + stat_summary(aes(x = dataset$CLASSE_SOCIAL, y = dataset$PREÇO),
+ggplot(data_train) + stat_summary(aes(x = data_train$Pclass, y = data_train$Fare),
                                fun.y = mean, geom = "bar",
                                fill = "lightblue", col = "grey50")
 
 #Gráfico média de preço da passagem por Sexo
-ggplot(dataset) + stat_summary(aes(x = dataset$SEXO, y = dataset$PREÇO),
+ggplot(data_train) + stat_summary(aes(x = data_train$Sex, y = data_train$Fare),
                                fun.y = mean, geom = "bar",
-                               fill = "lightblue", col = "grey50")
-
-# Esses 3 gráficos nos mostram que pessoas mais velhas, de classe social alta e do sexo 
-# feminino pagarama mais caro nas cabines do navio.
-
-
-
-# Medidas de Dispersão
-var(dataset$PREÇO)
-sd(dataset$PREÇO)
-
-# Coeficiente  de Variação
-CV <- (sd(dataset$PREÇO) / var(dataset$PREÇO) ) * 100
-CV
-
-# Total de Sobreviventes ou Não
-barplot(table(dataset$SOBREVIVEU))
-
-# Plot da distribuição utilizando ggplot2
-qplot(SOBREVIVEU, data = dataset, geom = "bar")
-+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-# Idade vs Sobreviveu
-ggplot(dataset[1:714,],aes(IDADE, fill = (SOBREVIVEU))) + 
+                               fill = "lightblue", col = "grey50")    
+       
+ # Age vs Survived
+ggplot(data_train[1:714,],aes(Age, fill = (Survived))) + 
   geom_bar(stat = "count") + 
   theme_few() +
-  xlab("Idade") +
-  facet_grid(.~SEXO)+
+  xlab("Age") +
+  facet_grid(.~Sex)+
   ylab("count") +
-  scale_fill_discrete(name = "Sobreviveu") + 
-  ggtitle("Idade vs Sobreviveu")
+  scale_fill_discrete(name = "Survived") + 
+  ggtitle("Age vs Survived")
 
-# Clase Social vc Sobreviveu
-ggplot(dataset[1:714,], aes(CLASSE_SOCIAL, fill = (SOBREVIVEU))) +
+# Pclass vc Survived
+ggplot(data_train[1:714,], aes(Pclass, fill = (Survived))) +
   geom_bar(stat = "count") +
   theme_few() +
-  xlab("Classe Social") +
-  facet_grid(.~SEXO) +
+  xlab("Pclass") +
+  facet_grid(.~Sex) +
   ylab("count") +
-  scale_fill_discrete(name = "Sobreviveu") +
-  ggtitle("Classe Social vs Sobrevivieu")
+  scale_fill_discrete(name = "Survided") +
+  ggtitle("Pclass vs Survived")
 
-# Porto de Embarque vs Sobreviveu
-ggplot(dataset[1:714,], aes(PORTO_DE_EMBARCAÇÃO, fill = (SOBREVIVEU))) +
+# Embarked vs Survived
+ggplot(data_train[1:714,], aes(Embarked, fill = (Survived))) +
   geom_bar(stat = "count") +
-  xlab("Porto de Embaracação") +
-  facet_grid(.~SEXO) +
+  xlab("Embarked") +
+  facet_grid(.~Sex) +
   ylab("count") +
-  scale_fill_discrete(name = "Sobreviveu") +
-  ggtitle("Porto de Embarcação vs Sobreviveu")
-
-
-
+  scale_fill_discrete(name = "Survived") +
+  ggtitle("Embarked vs Survived")
+       
 #########################################################################
 ################## Random Forest Classification Model ###################
 #########################################################################
 
 # Set the seed
 set.seed(12345)
-#summary(dataset)
-str(dataset)
 
 # Contruindo o modelo Random Forest
-rf_model <- randomForest(SOBREVIVEU ~ ., data = dataset)
+rf_model <- randomForest(Survived ~ ., data = data_train)
 print("Modelo contruido")
 rf_model
-
-#########################################################################
-################## Naive Bayes ##########################################
-#########################################################################
-x = dataset[,-6]
-y = dataset$SOBREVIVEU
-nbmodel <- train(x,y,'nb',trControl = trainControl(method = 'cv',number = 10))
-class(nbmodel)
-summary(nbmodel)
-print(nbmodel)
-predict(nbmodel$finalModel,x)
-table(predict(nbmodel$finalModel,x)$class,y)
-naive_iris <- NaiveBayes(dataset$SOBREVIVEU ~ ., data = dataset)
-plot(naive_iris)
-
-#########################################################################
-################## Classification and Regression Trees (CART)############
-#########################################################################
-
-set.seed(123)
-treemodel <- rpart(SOBREVIVEU ~ ., data = dataset, control = rpart.control(cp = 0.0001))
-printcp(treemodel)
-bestcp <- treemodel$cptable[which.min(treemodel$cptable[,"xerror"]),"CP"]
-bestcp
-tree.pruned <- prune(treemodel, cp = bestcp)
-tree.pruned
-
-
-
+       
+varImpPlot(rf_model)
+       
 ########################################################################
-##############Carregando dataset de Teste###############################
+############## Carregando dataset de Teste #############################
 ########################################################################
 
-data_teste <- read.csv("test.csv", sep = ",")
-#data_teste <- data.frame(data_teste)
-head(data_teste)
-colnames(data_teste)
-
-# Removendo colunas                     
-data_teste$PassengerId <- NULL
-data_teste$Name <- NULL
-data_teste$SibSp <- NULL
-data_teste$Parch <- NULL
-data_teste$Parch <- NULL
-data_teste$Ticket <- NULL
-data_teste$Cabin <- NULL
-
-# RENOMEANDO AS COLUNAS
-colnames(data_teste)[1] <- "CLASSE_SOCIAL"
-colnames(data_teste)[2] <- "SEXO"
-colnames(data_teste)[3] <- "IDADE"
-colnames(data_teste)[4] <- "PREÇO"
-colnames(data_teste)[5] <- "PORTO_DE_EMBARCAÇÃO"
-
-
+head(data_test)
+       
+data_test$PassengerId <- NULL
+data_test$Name <- NULL
+data_test$SibSp <- NULL
+data_test$Parch <- NULL
+data_test$Parch <- NULL
+data_test$Ticket <- NULL
+data_test$Cabin <- NULL
+       
 # Ordenando as colunas
-data_teste <- data_teste %>%
-  select(CLASSE_SOCIAL, IDADE, SEXO, PREÇO, PORTO_DE_EMBARCAÇÃO)
-
-
+data_test <- data_test %>%
+  select(Pclass, Age, Sex, Fare, Embarked)
+       
+head(data_test)
+       
 # Transoformando as Variáveis em fator, numerico e character
+data_test$Pclass <- as.factor(data_test$Pclass)
+levels(data_test$Pclass) <- c("Alta", "Média", "Baixa")
 
-data_teste$CLASSE_SOCIAL <- as.factor(data_teste$CLASSE_SOCIAL)
-levels(data_teste$CLASSE_SOCIAL)
-levels(data_teste$CLASSE_SOCIAL) <- c("Alta", "Média", "Baixa")
+data_test$Sex <- as.factor(data_test$Sex)
+levels(data_test$Sex) <- c("Feminino", "Masculino")
 
-data_teste$SEXO <- as.factor(data_teste$SEXO)
-levels(data_teste$SEXO) <- c("Feminino", "Masculino")
+data_test$Age <- as.numeric(data_test$Age)
+data_test$Age <- cut(data_test$Age, c(0, 30, 50, 100), labels = c("Jovem", "adulto", "Idoso"))
 
-data_teste$IDADE <- as.numeric(data_teste$IDADE)
-data_teste$IDADE <- cut(data_teste$IDADE, c(0, 30, 50, 100), labels = c("Jovem", "adulto", "Idoso"))
-
-data_teste$PORTO_DE_EMBARCAÇÃO <- as.factor(data_teste$PORTO_DE_EMBARCAÇÃO)
-levels(data_teste$PORTO_DE_EMBARCAÇÃO) <- c(0, "Cherbourg", "Queenstown", "Southampton")
-
+data_test$Embarked <- as.factor(data_test$Embarked)
+levels(data_test$Embarked) <- c(0, "Cherbourg", "Queenstown", "Southampton")
+       
 # Verificando se a valores missing
-sapply(dataset, function(x) sum(is.na(x)))
-missmap(dataset, main = "Valores Missing Observados")
-dataset <- na.omit(dataset)
-
-# Verifcar valores missing
-data_teste <- na.omit(data_teste)
-
+sapply(data_test, function(x) sum(is.na(x)))
+data_test <- na.omit(data_test)
+head(data_test)
+       
 ####################### Previsão Randon Forest #####################################
 ####################################################################################
-predictionrf <- predict(rf_model, data_teste)
+predictionrf <- predict(rf_model, data_test)
 predictionrf <- data.frame(predictionrf)
 predictionrf
-
-
-
-data_teste['Previsão'] <- c(predictionrf)
-data_teste
+       
+data_test['Previsão'] <- c(predictionrf)
+data_test
 table(predictionrf)
-
-rf_model
-
+       
 # Conferindo o erro do modelo 
 plot(rf_model, ylim = c(0,0.36))
 legend('topright', colnames(rf_model$err.rate), col = 1:3, fill = 1:3)
 
 varImpPlot(rf_model)
-
-
+       
 # Obtendo as variaveis mais importantes
 importance <- importance(rf_model)
 varimportance <- data.frame(Variables = row.names(importance), importance = round(importance[,'MeanDecreaseGini'],2))
@@ -326,40 +201,6 @@ ggplot(rankImportance, aes(x = reorder(Variables, importance), y = importance, f
 
 
 
-# SVC
-# Decision Tree
-# AdaBoost
-# Random Forest
-# Extra Trees
-# Gradient Boosting
-# Multiple layer perceprton (neural network)
-# KNN
-# Logistic regression
-# Linear Discriminant Analysis
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-getwd()
-setwd('/home/rfuzi/Documentos/Projetos/Kaggle/Titanic')
-
-dados_treino <- read.csv('train.csv',sep = ',')
-dados_treino <- 
-
-head(dados_treino)
-summary(dados_treino)
-View(dados_treino)
 
