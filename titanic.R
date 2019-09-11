@@ -12,7 +12,7 @@
 #################################################################
 
 getwd()
-setwd("/home/rfuzi/Documentos/Projetos/Kaggle/Titanic")
+setwd("/home/roberto/Documentos/git/R")
 
 install.packages("funModeling")
 install.packages("Amelia", lib = "~/myrlibrary")
